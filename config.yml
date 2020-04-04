@@ -1,0 +1,5 @@
+
+instanceName: self-hosted
+imageName: centos-8
+machineModel: cx11
+dataCenter: nbg1-dc3
