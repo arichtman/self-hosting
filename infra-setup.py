@@ -12,7 +12,9 @@ token = data['hetzner']['apiToken']
 data['hetzner']['ssh']['privateKey']
 
 client = Client(token)
-response = client.servers.create(name="my-server", server_type=ServerType(name="cx11"), image=Image(name="centos-8") )
+# TODO: use API to upload public key for SSH
+response = client.servers.create(
+    name="my-server", server_type=ServerType(name="cx11"), image=Image(name="centos-8"))
 server = response.server
 print(server)
 print("Root Password: " + response.root_password)
