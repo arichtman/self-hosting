@@ -1,3 +1,6 @@
-secrets.json
+
 .vscode/
 .DS_Store
+secrets.y*ml
+./output
+*.appx
