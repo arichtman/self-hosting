@@ -1,4 +1,4 @@
-Host <%= $Secrets.ssh.alias  %>
-  HostName <%= $Secrets.ssh.hostAddress %>
+Host <%= $Config.instanceName  %>
+  HostName <%= $DNSAddress %>
   User root
-  IdentityFile ~/.ssh/hetzner
+  IdentityFile ~/.ssh/<%= $Config.instanceName  %>
