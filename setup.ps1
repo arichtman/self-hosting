@@ -1,8 +1,8 @@
 
 #Read in our info
 
-Install-Module powershell-yaml
-Import-Module powershell-yaml
+Install-Module -Name powershell-yaml -Force -Scope $Config.installScope
+Import-Module -Name powershell-yaml
 $Secrets = Get-Content .\secrets.yml | ConvertFrom-Yaml
 $Config = Get-Content .\config.yml | ConvertFrom-Yaml
 
@@ -12,7 +12,7 @@ if ( -Not $(Test-Path $KeyFilePath) ) { ssh-keygen -t ed25519 -f $KeyFilePath -N
 
 #region ConfigureInfra
 
-Install-Module -Name HetznerCloud -Force -Scope CurrentUser
+Install-Module -Name HetznerCloud -Force -Scope $Config.installScope
 Import-Module -Name HetznerCloud
 
 # Authenticate
@@ -27,7 +27,8 @@ Set-HetznerCloud -Token $SecureString
 
 $Server = New-HetznerCloudServer -Name $Config.instanceName -Type $Config.machineModel -Image $Config.imageName -SshKey $Config.instanceName -Datacenter $Config.dataCenter
 ConvertTo-Yaml $Server | Set-Content -Path $(".\output\{0}.yml" -f $Config.instanceName)
-$DNSAddress = $Server.public_net.ipv4.dns_ptr
+$PublicDNSAddress = $Server.public_net.ipv4.dns_ptr
+$PublicIP = $Server.public_net.ipv4.ip
 #endregion
 
 #region ConfigureSSH
@@ -40,12 +41,12 @@ Add-AppxPackage .\Ubuntu.appx
 Remove-Item -Force .\Ubuntu.appx
 
 # Set OpenSSH host alias, identity file, and user
-Install-Module -Name EPS -Force -Scope CurrentUser
-Import-Module EPS
+Install-Module -Name EPS -Force -Scope $Config.installScope
+Import-Module -Name EPS
 Invoke-EpsTemplate -Path .\config.eps | Add-Content -Path "$Home\.ssh\config"
 
 # Override fingerprint to known hosts
-ForEach ($Address in @($DNSAddress, $Server.public_net.ipv4.ip)) {
+ForEach ($Address in @($PublicDNSAddress, $PublicIP)) {
     ssh-keygen -R $Address | Out-Null
     ssh-keyscan -H $Address | Add-Content -Path "$Home\.ssh\known_hosts"
 }
@@ -63,7 +64,21 @@ Write-Host "This will then add your private key to the ssh agent, and log in to 
 Set-Clipboard -Value $Secrets.keyPassphrase
 ssh-add $KeyFilePath
 Set-Clipboard -Value $null
-Get-Content -Raw .\vscode-server-setup.sh | ssh $Config.instanceName
+Get-Content -Raw .\server-setup.sh | ssh $Config.instanceName
+Get-Content -Raw .\vscode-repair.sh | ssh $Config.instanceName
+
+#endregion
+
+#region HardenServer
+
+<# TODO: See about Rsync instead
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+choco upgrade all --confirm
+choco install rsync
+rsync .\ $Config.instanceName:/tmp/setup #>
+
+scp .\hardening\* "$($Config.instanceName):/tmp"
+Get-Content -Raw .\hardening\run-in-docker.sh | ssh $Config.instanceName
 
 #endregion
 

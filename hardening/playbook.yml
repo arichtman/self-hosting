@@ -1,0 +1,9 @@
+---
+- name: That one hardening playbook
+  hosts: local
+  connection: local
+  become: yes
+  vars:
+    security_rhel7_automatic_package_updates: yes
+    roles:
+      - ansible-hardening

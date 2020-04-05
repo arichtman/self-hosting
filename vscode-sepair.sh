@@ -1,13 +1,5 @@
 #! /bin/bash
 
-# Install latest, greatest, and needest
-dnf update -y
-dnf upgrade -y
-dnf install -y python36 tar
-
-# Install a handy alias. I suspect as we move away from root this will come out.
-printf "\nalias python=python3" >> ~/.bashrc
-
 # If this folder exists a VSCode Server install has been attempted already. Often triggered by trying to Remote-SSH before tar binary was available in PATH
 HASH=$(ls /root/.vscode-server/bin/ | head -n 1)
 if [ $HASH ]
