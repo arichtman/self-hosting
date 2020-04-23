@@ -6,7 +6,7 @@ yum install dnf -y
 
 dnf update -y
 dnf upgrade -y
-dnf install -y python36 tar
+dnf install -y python36 tar git
 
 # Install a handy alias. I suspect as we move away from root this will come out.
 printf "\nalias python=python3" >> ~/.bashrc

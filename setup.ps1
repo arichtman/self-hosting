@@ -1,5 +1,5 @@
 
-#Read in our info
+# Read in our info
 
 Install-Module -Name powershell-yaml -Force -Scope $Config.installScope
 Import-Module -Name powershell-yaml
@@ -64,21 +64,17 @@ Write-Host "This will then add your private key to the ssh agent, and log in to 
 Set-Clipboard -Value $Secrets.keyPassphrase
 ssh-add $KeyFilePath
 Set-Clipboard -Value $null
-Get-Content -Raw .\server-setup.sh | ssh $Config.instanceName
-Get-Content -Raw .\vscode-repair.sh | ssh $Config.instanceName
+Get-Content -Raw $(.\server-setup.sh | ssh $Config.instanceName)
+Get-Content -Raw $(.\vscode-repair.sh | ssh $Config.instanceName)
 
 #endregion
 
 #region HardenServer
 
-<# TODO: See about Rsync instead
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-choco upgrade all --confirm
-choco install rsync
-rsync .\ $Config.instanceName:/tmp/setup #>
+ssh $Config.instanceName "mkdir -p /tmp/hardening"
+scp .\hardening\* "$($Config.instanceName):/tmp/hardening"
 
-scp .\hardening\* "$($Config.instanceName):/tmp"
-Get-Content -Raw .\hardening\run-in-docker.sh | ssh $Config.instanceName
+Get-Content -Raw $(.\hardening\run-in-docker.sh | ssh $Config.instanceName)
 
 #endregion
 
@@ -100,7 +96,7 @@ $Settings = Get-Content -Raw $SettingsFile | ConvertFrom-Json
 
 $DesiredSettings = @{
     "remote.SSH.configFile" = "$Home\.ssh\config"
-    "docker.host"           = "ssh://root@$DNSAddress"
+    "docker.host"           = "ssh://root@$($Config.instanceName)"
     #TODO: Nested JSON - this just dumps an escaped string
     #"remote.SSH.remotePlatform" = "{""$($Secrets.sshAlias)"": ""linux""}"
 }
