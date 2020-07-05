@@ -77,7 +77,7 @@ Set-Clipboard -Value $Secrets.keyPassphrase
 ssh-add $KeyFilePath
 Set-Clipboard -Value $null
 Get-Content -Raw .\server-setup.sh | ssh $Config.instanceName
-Get-Content -Raw $(.\vscode-repair.sh) | ssh $Config.instanceName
+#Get-Content -Raw .\vscode-repair.sh | ssh $Config.instanceName
 
 #endregion
 

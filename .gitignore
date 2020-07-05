@@ -2,5 +2,5 @@
 .vscode/
 .DS_Store
 secrets.y*ml
-./output/**/*
+output/**/*
 *.appx

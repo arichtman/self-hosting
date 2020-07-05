@@ -1,19 +1,22 @@
 #!/bin/sh
 
 # Install packages
-sudo dnf install -y docker ansible
+dnf install -y docker
 
-sudo systemctl start docker
-sudo systemctl enable docker
+systemctl start docker
+systemctl enable docker
 
+
+# TODO: see about just using this one https://github.com/willhallonline/docker-ansible
 pushd /tmp/hardening
+
+ssh-keygen -t ed25519 -f /root/.ssh/id_rsa -P ""
+
 # Build image
 docker build --tag hardening:latest .
+# Run with localhost connectivity
+docker run --rm -it --network="host" -v "$(pwd):/ansible/playbooks" hardening playbook.yml
 
-# Run in background with localhost connectivity
-docker container run hardening:latest --network="host" --name='hardening' --rm --detach
-# Wait till finish
-docker container wait 'hardening'
 # Remove everything from docker
 docker system prune --force
 

@@ -1,0 +1,12 @@
+
+version: "3.7"
+services:
+  app:
+    image: nginx
+    restart: always
+    networks:
+      - proxy
+    labels:
+      - "traefik.docker.network=$DEFAULT_NETWORK"
+      - "traefik.basic.frontend.rule=Host(traefik.$MY_DOMAIN)"
+      - "traefik.basic.protocol=http"
