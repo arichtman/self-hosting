@@ -4,3 +4,8 @@
 secrets.y*ml
 output/**/*
 *.appx
+applications/.aws/config
+applications/aws-policy.json
+applications/.env
+applications/traefik.toml
+applications/traefik.yaml

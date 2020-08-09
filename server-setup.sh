@@ -9,7 +9,26 @@ dnf -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-
 
 dnf update -y
 dnf upgrade -y
-dnf install -y python36 tar git
+dnf install -y python3-devel tar git gcc jq snapd
+
+sudo systemctl enable --now snapd.socket
+
+snap install yq
 
 # Install a handy alias. I suspect as we move away from root this will come out.
 printf "\nalias python=python3" >> ~/.bashrc
+printf "\nalias pip=python3" >> ~/.bashrc
+printf "\nalias sl='cd'" >> ~/.bashrc
+printf "\nalias cls='clear'" >> ~/.bashrc
+printf "\neval $(thefuck --alias)" >> ~./bashrc
+printf "\nalias fu='fuck'" >> ~/.bashrc
+
+yq shell-completion > /etc/bash_completion.d/yq
+
+printf "\n. /etc/bash_completion.d/yq" >> ~/.bashrc
+
+printf "\nset show-all-if-ambiguous on\n" >> ~/.inputrc
+
+exec bash -l
+
+pip install thefuck

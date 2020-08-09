@@ -1,0 +1,195 @@
+{
+    "$schema": "https://certbot-dns-route53.readthedocs.io/en/stable/",
+    "$id": "https://certbot-dns-route53.readthedocs.io/en/stable/#sample-aws-policy-json",
+    "type": "object",
+    "title": "AWS policy for enabling access for certbot automatic certificates",
+    "description": "The root schema comprises the entire policy.",
+    "default": {},
+    "examples": [
+        {
+            "Version": "2012-10-17",
+            "Id": "certbot-dns-route53 policy",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "route53:ListHostedZones",
+                        "route53:GetChange"
+                    ],
+                    "Resource": [
+                        "*"
+                    ]
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "route53:ChangeResourceRecordSets"
+                    ],
+                    "Resource": [
+                        "arn:aws:route53:::hostedzone/YOURHOSTEDZONEID"
+                    ]
+                }
+            ]
+        }
+    ],
+    "required": [
+        "Version",
+        "Id",
+        "Statement"
+    ],
+    "properties": {
+        "Version": {
+            "$id": "#/properties/Version",
+            "type": "string",
+            "title": "For end users to manage their versions",
+            "description": "Do with it as you wish",
+            "default": "",
+            "examples": [
+                "2012-10-17",
+                "v2.3.5"
+            ]
+        },
+        "Id": {
+            "$id": "#/properties/Id",
+            "type": "string",
+            "title": "Some kind of unique name, I guess",
+            "description": "Use something that makes sense to humans",
+            "default": "",
+            "examples": [
+                "certbot-dns-route53 policy"
+            ]
+        },
+        "Statement": {
+            "$id": "#/properties/Statement",
+            "type": "array",
+            "title": "The Statement schema",
+            "description": "Actual declaration on permissions",
+            "default": [],
+            "examples": [
+                [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "route53:ListHostedZones",
+                            "route53:GetChange"
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "route53:ChangeResourceRecordSets"
+                        ],
+                        "Resource": [
+                            "arn:aws:route53:::hostedzone/YOURHOSTEDZONEID"
+                        ]
+                    }
+                ]
+            ],
+            "additionalItems": true,
+            "items": {
+                "$id": "#/properties/Statement/items",
+                "anyOf": [
+                    {
+                        "$id": "#/properties/Statement/items/anyOf/0",
+                        "type": "object",
+                        "title": "The first anyOf schema",
+                        "description": "Objects that you may operate on",
+                        "default": {},
+                        "examples": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "route53:ListHostedZones",
+                                    "route53:GetChange"
+                                ],
+                                "Resource": [
+                                    "*"
+                                ]
+                            }
+                        ],
+                        "required": [
+                            "Effect",
+                            "Action",
+                            "Resource"
+                        ],
+                        "properties": {
+                            "Effect": {
+                                "$id": "#/properties/Statement/items/anyOf/0/properties/Effect",
+                                "type": "string",
+                                "title": "The Effect schema",
+                                "description": "An explanation about the purpose of this instance.",
+                                "default": "",
+                                "examples": [
+                                    "Allow"
+                                ]
+                            },
+                            "Action": {
+                                "$id": "#/properties/Statement/items/anyOf/0/properties/Action",
+                                "type": "array",
+                                "title": "The Action schema",
+                                "description": "An explanation about the purpose of this instance.",
+                                "default": [],
+                                "examples": [
+                                    [
+                                        "route53:ListHostedZones",
+                                        "route53:GetChange"
+                                    ]
+                                ],
+                                "additionalItems": true,
+                                "items": {
+                                    "$id": "#/properties/Statement/items/anyOf/0/properties/Action/items",
+                                    "anyOf": [
+                                        {
+                                            "$id": "#/properties/Statement/items/anyOf/0/properties/Action/items/anyOf/0",
+                                            "type": "string",
+                                            "title": "The first anyOf schema",
+                                            "description": "An explanation about the purpose of this instance.",
+                                            "default": "",
+                                            "examples": [
+                                                "route53:ListHostedZones",
+                                                "route53:GetChange"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            "Resource": {
+                                "$id": "#/properties/Statement/items/anyOf/0/properties/Resource",
+                                "type": "array",
+                                "title": "The Resource schema",
+                                "description": "An explanation about the purpose of this instance.",
+                                "default": [],
+                                "examples": [
+                                    [
+                                        "*"
+                                    ]
+                                ],
+                                "additionalItems": true,
+                                "items": {
+                                    "$id": "#/properties/Statement/items/anyOf/0/properties/Resource/items",
+                                    "anyOf": [
+                                        {
+                                            "$id": "#/properties/Statement/items/anyOf/0/properties/Resource/items/anyOf/0",
+                                            "type": "string",
+                                            "title": "The first anyOf schema",
+                                            "description": "An explanation about the purpose of this instance.",
+                                            "default": "",
+                                            "examples": [
+                                                "*"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        "additionalProperties": true
+                    }
+                ]
+            }
+        }
+    },
+    "additionalProperties": true
+}

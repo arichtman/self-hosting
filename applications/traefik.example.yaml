@@ -1,0 +1,31 @@
+---
+acme:
+  email: your_email@your_domain
+  entryPoint: https
+  httpChallenge:
+    entryPoint: http
+  onHostRule: true
+  storage: acme.json
+api:
+  entrypoint: dashboard
+defaultEntryPoints:
+  - http
+  - https
+docker:
+  domain: your_domain
+  network: web
+  watch: true
+entryPoints:
+  dashboard:
+    address: ":8080"
+    auth:
+      basic:
+        users:
+          - "admin:your_encrypted_password"
+  http:
+    address: ":80"
+    redirect:
+      entryPoint: https
+  https:
+    address: ":443"
+    tls: {}
