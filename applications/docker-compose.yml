@@ -1,0 +1,40 @@
+version: "3.3"
+services:
+
+  reverse-proxy:
+    container_name: proxy
+    hostname: traefik
+    image: traefik:v2.3
+    restart: always
+    command:
+      # - "--log.level=DEBUG"
+      - "--api.insecure=${TRAEFIK_API_INSECURE_ENABLED}"
+      - "--providers.docker=true"
+    ports:
+      - 80:80
+      - 8080:8080 # needed for dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.toml:/etc/traefik.toml
+    networks:
+      - web
+
+  website:
+    container_name: website
+    hostname: nginx
+    image: nginx:alpine
+    restart: always
+    expose:
+      - 80
+    networks:
+      - web
+    volumes:
+      - ./www:/usr/share/nginx/html
+    labels:
+      - "traefik.http.routers.website.rule=Host(`${MY_DOMAIN}`)"
+      - "traefik.enable=true"
+    depends_on:
+      - reverse-proxy
+
+networks:
+  web:
