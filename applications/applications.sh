@@ -1,30 +1,23 @@
 #! /bin/sh
 
-source .env
+dnf install -y httpd-tools certbot # certbot-dns-route53 <= Need to test this is needed - I think we're using TLS challenge instead of DNS so no need for aws modules
 
-dnf install -y httpd-tools cargo certbot certbot-dns-route53
-cargo install toml-cli yj #may not need to install toml-cli
+get_env()
+{
+    set -a;
+    source .env;
+    set +a;
+};
 
-# may just need temporary addition to path if uninstalling later
-# consider building a docker image for this setup if most is unneeded for operations
-printf "\nPATH=\$PATH:/root/.cargo/bin\n" >> ~/.bashrc
+get_env
 
-# remove $PATH duplicate entries
-printf "\nPATH=\$(echo -n \$PATH | awk -v RS=: '!(\$0 in a) {a[\$0]; printf(\"%%s%%s\", length(a) > 1 ? \":\" : \"\", \$0)}')\n" >> ~/.bashrc
-exec bash -l
+mkdir -p "${BASE_DATA_LOCATION}/{postgres,letsencrypt,nextcloud,website,proxy}";
+cp ./www/* "${BASE_DATA_LOCATION}/website";
+# There's definitely nicer approaches to shell templating than this
+cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"
 
-# need to see about native yaml support or dynamic config options. All this means nothing atm cos we can't convert back to toml
-toml get ./applications/traefik.toml . | yj -jy > ./applications/traefik.yaml
-
-TRAEFIK_PASSWORD_HASHED=$(htpasswd -nb admin ${TRAEFIK_PASSWORD})
-yq w -i ./applications/traefik.yaml entryPoints.dashboard.auth.basic.users[0] $TRAEFIK_PASSWORD_HASHED
-yq w -i ./applications/traefik.yaml docker.domain $MY_DOMAIN
-yq w -i ./applications/traefik.yaml acme.email $MY_EMAIL
-
-#this is still super important tho
-mkdir -p $BASE_DATA_LOCATION/{database,letsencrypt,nextcloud};
-touch $BASE_DATA_LOCATION/letsencrypt/acme.json;
-chmod 600 $BASE_DATA_LOCATION/letsencrypt/acme.json;
+CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
+chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
 
 # in progress
 # cat ./postgres-init.sql  | envsubst > ./postgres.sql
@@ -34,4 +27,6 @@ chmod 600 $BASE_DATA_LOCATION/letsencrypt/acme.json;
 
 docker-compose up -d;
 
-#docker-compose down; source .env; sleep 1; docker-compose up -d
+# For development
+# export -f get_env
+# alias redo="docker-compose down; get_env; sleep 1; docker-compose up -d"

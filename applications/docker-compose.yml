@@ -10,12 +10,18 @@ services:
       # - "--log.level=DEBUG"
       - "--api.insecure=${TRAEFIK_API_INSECURE_ENABLED}"
       - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${TRAEFIK_LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - 80:80
       - 8080:8080 # needed for dashboard
+      - "443:443" # needed for httpS
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.toml:/etc/traefik.toml
+      - ${BASE_DATA_LOCATION}/proxy/traefik.yaml:/etc/traefik.yaml
+      - ${BASE_DATA_LOCATION}/letsencrypt/acme.json:/letsencrypt/acme.json
     networks:
       - web
 
@@ -29,10 +35,12 @@ services:
     networks:
       - web
     volumes:
-      - ./www:/usr/share/nginx/html
+      - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
     labels:
-      - "traefik.http.routers.website.rule=Host(`${MY_DOMAIN}`)"
       - "traefik.enable=true"
+      - "traefik.http.routers.website.rule=Host(`${MY_DOMAIN}`)"
+      - "traefik.http.routers.website.tls.certresolver=myresolver"
+      - "traefik.http.routers.website.entrypoints=websecure"
     depends_on:
       - reverse-proxy
 
