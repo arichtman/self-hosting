@@ -11,12 +11,23 @@ get_env()
 
 get_env
 
-mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy};
-mkdir -p {$NEXTCLOUD_HOST_DATA_DIR,$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
+make_directories()
+{
+    mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
+    mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
+}
+
+make_directories
 
 cp ./www/* "${BASE_DATA_LOCATION}/website";
-# There's definitely nicer approaches to shell templating than this
-cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"
+
+config_traefik()
+{
+    # There's definitely nicer approaches to shell templating than this
+    cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"
+}
+
+config_traefik
 
 CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
@@ -45,6 +56,6 @@ docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:co
 
 # For development
 # export -f get_env
-# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; rm -rf ${BASE_DATA_LOCATION}/postgres; mkdir -p ${BASE_DATA_LOCATION}/postgres; mkdir -p {$NEXTCLOUD_HOST_DATA_DIR,$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
+# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; make_directories ; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
 
-# alias redo="docker-compose down; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 1; docker-compose up -d"
+# alias redo="docker-compose down; config_traefik ; get_env; sleep 1; docker-compose up -d"

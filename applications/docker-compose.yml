@@ -29,23 +29,70 @@ services:
       - web
 
   website:
-    container_name: website
-    hostname: nginx
-    image: nginx:alpine
+        container_name: website
+        hostname: nginx
+        image: nginx:alpine
+        restart: always
+        expose:
+          - 80
+        networks:
+          - web
+        volumes:
+          - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
+        labels:
+          - "traefik.enable=true"
+          - "traefik.http.routers.website.rule=Host(`${TOP_LEVEL_DOMAIN}`)"
+          - "traefik.http.routers.website.tls.certresolver=myresolver"
+          - "traefik.http.routers.website.entrypoints=websecure"
+        depends_on:
+          - reverse-proxy
+
+  rss:
+    container_name: reader
+    hostname: ttrss
+    image: wangqiru/ttrss:19.8
     restart: always
     expose:
-      - 80
+      - 181
     networks:
       - web
-    volumes:
-      - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
+      - data
+    # volumes:
+    #   - ${TTRSS_HOST_DIR}:/var/www
+    environment:
+      - DB_HOST=rss-db
+      - DB_PORT=5432
+      - DB_NAME=${TTRSS_POSTGRES_DB}
+      - DB_USER=${TTRSS_POSTGRES_USER}
+      - DB_PASS=${TTRSS_POSTGRES_PASSWORD}
+      - SELF_URL_PATH=https://rss.${TOP_LEVEL_DOMAIN}/
+      # - ENABLE_PLUGINS=auth_internal,fever
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.website.rule=Host(`${TOP_LEVEL_DOMAIN}`)"
-      - "traefik.http.routers.website.tls.certresolver=myresolver"
-      - "traefik.http.routers.website.entrypoints=websecure"
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.ttrss.tls=true
+      - traefik.http.routers.ttrss-secure.tls.certresolver=myresolver
+      - traefik.http.routers.ttrss-secure.entrypoints=websecure
+      - traefik.http.routers.ttrss-secure.rule=Host(`rss.${TOP_LEVEL_DOMAIN}`)
     depends_on:
       - reverse-proxy
+      - rss-db
+    command: sh -c 'sh /wait-for.sh $$DB_HOST:$$DB_PORT -- php /configure-db.php && exec s6-svscan /etc/s6/'
+
+  rss-db:
+    image: postgres:alpine
+    container_name: rss-db
+    restart: always
+    expose:
+      - 5432
+    volumes:
+      - ${TTRSS_HOST_DB_DIR}:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${TTRSS_POSTGRES_DB}
+      - POSTGRES_USER=${TTRSS_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TTRSS_POSTGRES_PASSWORD}
+    networks:
+      - data
 
   cloud-db:
     container_name: cloud-db
