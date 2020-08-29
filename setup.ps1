@@ -1,18 +1,19 @@
 
-#Read in our info
+# Read in our info
 
-Install-Module powershell-yaml
-Import-Module powershell-yaml
+Install-Module -Name powershell-yaml -Force -Scope $Config.installScope
+Import-Module -Name powershell-yaml
 $Secrets = Get-Content .\secrets.yml | ConvertFrom-Yaml
 $Config = Get-Content .\config.yml | ConvertFrom-Yaml
 
 # Create key if needed TODO: Find a noclobber option for ssh-keygen
 $KeyFilePath = "{0}\.ssh\{1}" -f $Home, $Config.instanceName
 if ( -Not $(Test-Path $KeyFilePath) ) { ssh-keygen -t ed25519 -f $KeyFilePath -N $Secrets.keyPassphrase }
+$PublicKey = Get-Content "$KeyFilePath.pub"
 
 #region ConfigureInfra
 
-Install-Module -Name HetznerCloud -Force -Scope CurrentUser
+Install-Module -Name HetznerCloud -Force -Scope $Config.installScope
 Import-Module -Name HetznerCloud
 
 # Authenticate
@@ -20,14 +21,18 @@ $SecureString = ConvertTo-SecureString $Secrets.apiToken -AsPlainText -Force
 Set-HetznerCloud -Token $SecureString
 
 # Add key
-Add-HetznerCloudSshKey -Name $Config.instanceName -PublicKey $(Get-Content -Raw "${KeyFilePath}.pub")
+If ( $null -eq $( Get-HetznerCloudSshKey -Name $Config.instanceName ) ) {
+    Add-HetznerCloudSshKey -Name $Config.instanceName -PublicKey $PublicKey
+}
+
 # In order for the module to update it's validation sets to allow that new key we have to reload it, which also wipes your auth.
 Import-Module -Name HetznerCloud -Force
 Set-HetznerCloud -Token $SecureString
 
 $Server = New-HetznerCloudServer -Name $Config.instanceName -Type $Config.machineModel -Image $Config.imageName -SshKey $Config.instanceName -Datacenter $Config.dataCenter
 ConvertTo-Yaml $Server | Set-Content -Path $(".\output\{0}.yml" -f $Config.instanceName)
-$DNSAddress = $Server.public_net.ipv4.dns_ptr
+$PublicDNSAddress = $Server.public_net.ipv4.dns_ptr
+$PublicIP = $Server.public_net.ipv4.ip
 #endregion
 
 #region ConfigureSSH
@@ -40,15 +45,23 @@ Add-AppxPackage .\Ubuntu.appx
 Remove-Item -Force .\Ubuntu.appx
 
 # Set OpenSSH host alias, identity file, and user
-Install-Module -Name EPS -Force -Scope CurrentUser
-Import-Module EPS
+Install-Module -Name EPS -Force -Scope $Config.installScope
+Import-Module -Name EPS
 Invoke-EpsTemplate -Path .\config.eps | Add-Content -Path "$Home\.ssh\config"
 
-# Override fingerprint to known hosts
-ForEach ($Address in @($DNSAddress, $Server.public_net.ipv4.ip)) {
-    ssh-keygen -R $Address | Out-Null
-    ssh-keyscan -H $Address | Add-Content -Path "$Home\.ssh\known_hosts"
+# Remove existing fingerprints in known hosts, then add and hash.
+ForEach ( $Address in @($PublicDNSAddress, $PublicIP) ) {
+    If ( ssh-keygen -l -F $Address ) {
+        ssh-keygen -R $Address
+    }
+    # TODO: improve security by adding directly from public key
+    ssh-keyscan -H $PublicDNSAddress, $PublicIP | Add-Content -Path "$Home\.ssh\known_hosts"
 }
+<#
+"$PublicDNSAddress,$PublicIP $PublicKey" | Add-Content -Path "$Home\.ssh\known_hosts"
+ssh-keygen -H
+Remove-Item "$Home\.ssh\known_hosts.old"
+#>
 
 # TODO: Finish adding the key passphrase to the agent for non interactive login
 Set-Service sshd -StartupType Automatic
@@ -63,7 +76,17 @@ Write-Host "This will then add your private key to the ssh agent, and log in to 
 Set-Clipboard -Value $Secrets.keyPassphrase
 ssh-add $KeyFilePath
 Set-Clipboard -Value $null
-Get-Content -Raw .\vscode-server-setup.sh | ssh $Config.instanceName
+Get-Content -Raw .\server-setup.sh | ssh $Config.instanceName
+#Get-Content -Raw .\vscode-repair.sh | ssh $Config.instanceName
+
+#endregion
+
+#region HardenServer
+
+ssh $Config.instanceName "mkdir -p /tmp/hardening"
+scp .\hardening\* "$($Config.instanceName):/tmp/hardening"
+
+Get-Content -Raw $(.\hardening\run-in-docker.sh ) | ssh $Config.instanceName
 
 #endregion
 
