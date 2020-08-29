@@ -86,20 +86,34 @@ services:
       - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_FQDN}
       - TRUSTED_PROXIES=${DOCKER_SUBNET_CIDR}
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
+      - traefik.enable=true
+      - traefik.docker.network=web
       - traefik.http.routers.nextcloud.tls=true
-      - "traefik.http.routers.nextcloud-secure.tls.certresolver=myresolver"
-      - "traefik.http.routers.nextcloud-secure.entrypoints=websecure"
-      - "traefik.http.routers.nextcloud-secure.rule=Host(`${NEXTCLOUD_FQDN}`)"
-      - "traefik.http.routers.nextcloud-secure.middlewares=nextcloud,nextcloud_redirect"
-      - "traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=ALLOW-FROM https://${NEXTCLOUD_FQDN}"
-      - "traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' ${TOP_LEVEL_DOMAIN} *.${TOP_LEVEL_DOMAIN}"
+      - traefik.http.routers.nextcloud-secure.tls.certresolver=myresolver
+      - traefik.http.routers.nextcloud-secure.entrypoints=websecure
+      - traefik.http.routers.nextcloud-secure.rule=Host(`${NEXTCLOUD_FQDN}`)
+      - traefik.http.routers.nextcloud-secure.middlewares=nextcloud,nextcloud_redirect
+      # This resolves security warnings in Admin settings
       - traefik.http.middlewares.nextcloud.headers.stsSeconds=15552001
-      - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.nextcloud.headers.stsPreload=true
+      # Resolves warning about X-Frame-Options header
+      - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=SAMEORIGIN
+      # These 2 resolves issues handling calendar and vCards
       - traefik.http.middlewares.nextcloud_redirect.redirectregex.regex=/.well-known/(card|cal)dav
       - traefik.http.middlewares.nextcloud_redirect.redirectregex.replacement=/remote.php/dav/
+      # These 2 resolve leaky server information
+      - traefik.http.middlewares.nextcloud.headers.customresponseheaders.Server=
+      - traefik.http.middlewares.nextcloud.headers.customresponseheaders.X-Powered-By=
+
+      # This middleware breaks trust due to mixed content (tested Chrome 84 and Firefox 80). It does correct the redirect for logging in though.
+      # - "traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' ${TOP_LEVEL_DOMAIN} *.${TOP_LEVEL_DOMAIN}"
+      # These remaining ones I'm not quite sure what they're supposed to resolve.
+      # - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=ALLOW-FROM https://${NEXTCLOUD_FQDN}
+      # - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
+      # - traefik.http.middlewares.nextcloud.headers.stsPreload=true
+      # - traefik.http.middlewares.nextcloud.headers.browserXSSFilter=true
+      # - traefik.http.middlewares.nextcloud.headers.contentTypeNosniff=true
+      # - traefik.http.middlewares.nextcloud.headers.forceSTSHeader=true
+      # - traefik.http.middlewares.nextcloud.headers.referrerPolicy=no-referrer
 
 networks:
   web:
