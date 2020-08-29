@@ -5,9 +5,9 @@ api:
 defaultEntryPoints:
   - http
 docker:
-  domain: "${MY_DOMAIN}"
+  domain: "${TOP_LEVEL_DOMAIN}"
   exposedbydefault: false
-  network: "${DEFAULT_NETWORK}"
+  network: web
   watch: true
 entryPoints:
   dashboard:

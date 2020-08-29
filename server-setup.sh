@@ -11,6 +11,9 @@ dnf update -y
 dnf upgrade -y
 dnf install -y python3-devel tar git gcc jq snapd
 
+dnf autoremove
+dnf clean all
+
 sudo systemctl enable --now snapd.socket
 
 snap install yq
@@ -28,6 +31,10 @@ yq shell-completion > /etc/bash_completion.d/yq
 printf "\n. /etc/bash_completion.d/yq" >> ~/.bashrc
 
 printf "\nset show-all-if-ambiguous on\n" >> ~/.inputrc
+
+# remove $PATH duplicate entries
+# May be a way to use %q here to handle the escaping
+printf "\nPATH=\$(echo -n \$PATH | awk -v RS=: '!(\$0 in a) {a[\$0]; printf(\"%%s%%s\", length(a) > 1 ? \":\" : \"\", \$0)}')\n" >> ~/.bashrc
 
 exec bash -l
 
