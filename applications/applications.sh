@@ -45,5 +45,6 @@ docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:co
 
 # For development
 # export -f get_env
-# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; rm -rf ${BASE_DATA_LOCATION}/postgres; mkdir -p ${BASE_DATA_LOCATION}/postgres; mkdir -p {$NEXTCLOUD_HOST_DATA_DIR,$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}; get_env; sleep 1; docker-compose up -d"
-# alias redo="docker-compose down; get_env; sleep 1; docker-compose up -d"
+# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; rm -rf ${BASE_DATA_LOCATION}/postgres; mkdir -p ${BASE_DATA_LOCATION}/postgres; mkdir -p {$NEXTCLOUD_HOST_DATA_DIR,$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
+
+# alias redo="docker-compose down; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 1; docker-compose up -d"
