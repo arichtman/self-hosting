@@ -1,0 +1,172 @@
+version: "3.5"
+services:
+
+  reverse-proxy:
+    container_name: proxy
+    hostname: traefik
+    image: ${TRAEFIK_DOCKER_IMAGE}
+    restart: always
+    command:
+      # - "--log.level=DEBUG"
+      - "--api.insecure=${TRAEFIK_API_INSECURE_ENABLED}"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${TRAEFIK_LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${BASE_DATA_LOCATION}/proxy/traefik.yaml:/etc/traefik.yaml
+      - ${BASE_DATA_LOCATION}/letsencrypt/acme.json:/letsencrypt/acme.json
+    networks:
+      - web
+
+  website:
+        container_name: website
+        hostname: nginx
+        image: nginx:alpine
+        restart: always
+        expose:
+          - 80
+        networks:
+          - web
+        volumes:
+          - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
+        labels:
+          - "traefik.enable=true"
+          - "traefik.http.routers.website.rule=Host(`${TOP_LEVEL_DOMAIN}`)"
+          - "traefik.http.routers.website.tls.certresolver=myresolver"
+          - "traefik.http.routers.website.entrypoints=websecure"
+        depends_on:
+          - reverse-proxy
+
+  rss:
+    container_name: reader
+    hostname: ttrss
+    image: wangqiru/ttrss:19.8
+    restart: always
+    expose:
+      - 181
+    networks:
+      - web
+      - data
+    # volumes:
+    #   - ${TTRSS_HOST_DIR}:/var/www
+    environment:
+      - DB_HOST=rss-db
+      - DB_PORT=5432
+      - DB_NAME=${TTRSS_POSTGRES_DB}
+      - DB_USER=${TTRSS_POSTGRES_USER}
+      - DB_PASS=${TTRSS_POSTGRES_PASSWORD}
+      - SELF_URL_PATH=https://rss.${TOP_LEVEL_DOMAIN}/
+      # - ENABLE_PLUGINS=auth_internal,fever
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.ttrss.tls=true
+      - traefik.http.routers.ttrss-secure.tls.certresolver=myresolver
+      - traefik.http.routers.ttrss-secure.entrypoints=websecure
+      - traefik.http.routers.ttrss-secure.rule=Host(`rss.${TOP_LEVEL_DOMAIN}`)
+    depends_on:
+      - reverse-proxy
+      - rss-db
+    command: sh -c 'sh /wait-for.sh $$DB_HOST:$$DB_PORT -- php /configure-db.php && exec s6-svscan /etc/s6/'
+
+  rss-db:
+    image: postgres:alpine
+    container_name: rss-db
+    restart: always
+    expose:
+      - 5432
+    volumes:
+      - ${TTRSS_HOST_DB_DIR}:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${TTRSS_POSTGRES_DB}
+      - POSTGRES_USER=${TTRSS_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TTRSS_POSTGRES_PASSWORD}
+    networks:
+      - data
+
+  cloud-db:
+    container_name: cloud-db
+    hostname: cloud-db
+    image: ${NEXTCLOUD_POSTGRES_DOCKER_IMAGE}
+    restart: always
+    expose:
+      - 5432
+    volumes:
+      - ${NEXTCLOUD_HOST_DB_DIR}:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${NEXTCLOUD_POSTGRES_DB}
+      - POSTGRES_USER=${NEXTCLOUD_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${NEXTCLOUD_POSTGRES_PASSWORD}
+    networks:
+      - data
+
+      # changing the data directory leads to permissions issues for www-data user - not sure how to resolve.
+  nextcloud:
+    depends_on:
+      - cloud-db
+      - reverse-proxy
+    image: ${NEXTCLOUD_DOCKER_IMAGE}
+    container_name: cloud
+    hostname: ${NEXTCLOUD_FQDN}
+    volumes:
+      - ${NEXTCLOUD_HOST_WEB_DIR}:/var/www/html
+      # - ${NEXTCLOUD_HOST_DATA_DIR}:/var/www/data
+    networks:
+      - data
+      - web
+    restart: always
+    environment:
+      - POSTGRES_HOST=cloud-db
+      - POSTGRES_DB=${NEXTCLOUD_POSTGRES_DB}
+      - POSTGRES_USER=${NEXTCLOUD_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${NEXTCLOUD_POSTGRES_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_FQDN}
+      # - NEXTCLOUD_DATA_DIR=/var/www/data
+      - TRUSTED_PROXIES=${DOCKER_SUBNET_CIDR}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.nextcloud.tls=true
+      - traefik.http.routers.nextcloud-secure.tls.certresolver=myresolver
+      - traefik.http.routers.nextcloud-secure.entrypoints=websecure
+      - traefik.http.routers.nextcloud-secure.rule=Host(`${NEXTCLOUD_FQDN}`)
+      - traefik.http.routers.nextcloud-secure.middlewares=nextcloud,nextcloud_redirect
+      # This resolves security warnings in Admin settings
+      - traefik.http.middlewares.nextcloud.headers.stsSeconds=15552001
+      # Resolves warning about X-Frame-Options header
+      - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=SAMEORIGIN
+      # These 2 resolves issues handling calendar and vCards
+      - traefik.http.middlewares.nextcloud_redirect.redirectregex.regex=/.well-known/(card|cal)dav
+      - traefik.http.middlewares.nextcloud_redirect.redirectregex.replacement=/remote.php/dav/
+      # These 2 resolve leaky server information
+      - traefik.http.middlewares.nextcloud.headers.customresponseheaders.Server=
+      - traefik.http.middlewares.nextcloud.headers.customresponseheaders.X-Powered-By=
+
+      # This middleware breaks trust due to mixed content (tested Chrome 84 and Firefox 80). It does correct the redirect for logging in though.
+      # - "traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' ${TOP_LEVEL_DOMAIN} *.${TOP_LEVEL_DOMAIN}"
+      # These remaining ones I'm not quite sure what they're supposed to resolve.
+      # - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=ALLOW-FROM https://${NEXTCLOUD_FQDN}
+      # - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
+      # - traefik.http.middlewares.nextcloud.headers.stsPreload=true
+      # - traefik.http.middlewares.nextcloud.headers.browserXSSFilter=true
+      # - traefik.http.middlewares.nextcloud.headers.contentTypeNosniff=true
+      # - traefik.http.middlewares.nextcloud.headers.forceSTSHeader=true
+      # - traefik.http.middlewares.nextcloud.headers.referrerPolicy=no-referrer
+
+networks:
+  web:
+    name: web
+  data:
+    name: data
