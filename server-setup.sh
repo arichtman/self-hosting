@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# Install latest, greatest, and needest
+# Install latest, greatest, and newest
 yum install epel-release -y # Repo must be installed before dnf
 yum install dnf -y
 

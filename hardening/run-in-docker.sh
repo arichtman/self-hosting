@@ -6,8 +6,6 @@ dnf install -y docker
 systemctl start docker
 systemctl enable docker
 
-
-# TODO: see about just using this one https://github.com/willhallonline/docker-ansible
 pushd /tmp/hardening
 
 ssh-keygen -t ed25519 -f /root/.ssh/id_rsa -P ""
