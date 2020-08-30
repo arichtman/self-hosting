@@ -48,4 +48,4 @@ docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:co
 # alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; make_directories ; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
 
 # alias redo="docker-compose down; config_traefik ; get_env; sleep 1; docker-compose up -d"
-# alias redo="docker stop oauth && docker rm oauth; docker stop whoami && docker rm whoami; docker-compose up -d oauth; docker-compose up -d whoami"
+# alias redo="docker stop fwd-auth && docker rm fwd-auth; docker stop whoami && docker rm whoami; docker-compose up -d authentication; docker-compose up -d whoami"
