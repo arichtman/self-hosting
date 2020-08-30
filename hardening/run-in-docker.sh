@@ -19,3 +19,6 @@ docker run --rm -it --network="host" -v "$(pwd):/ansible/playbooks" hardening pl
 docker system prune --force
 
 popd
+
+git clone https://github.com/docker/docker-bench-security.git
+./docker-bench-security/docker-bench-security.sh -b > benchmark.txt 2>/dev/nul
