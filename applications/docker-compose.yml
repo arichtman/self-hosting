@@ -6,7 +6,7 @@ services:
     image: ${TRAEFIK_DOCKER_IMAGE}
     restart: always
     command:
-      - --log.level=DEBUG
+      - --log.level=DEBUG # on for testing
       - --api.insecure=${TRAEFIK_API_INSECURE_ENABLED}
       - --providers.docker=true
       - --entrypoints.web.address=:80
@@ -31,15 +31,16 @@ services:
       - traefik.http.routers.dashboard.entrypoints=websecure
       - traefik.http.services.dashboard.loadbalancer.server.port=8080
 
-      - traefik.http.middlewares.auth-mdl.forwardauth.address=http://authentication:4181
-      - traefik.http.middlewares.auth-mdl.forwardauth.authResponseHeaders=X-Forwarded-User
-      # - traefik.http.middlewares.auth-mdl.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.auth-mdl.forwardAuth.address=http://forwardauth:4181
+      - traefik.http.middlewares.auth-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
+      # This does not resolve the issue
+      - traefik.http.middlewares.auth-mdl.forwardAuth.trustForwardHeader=true
     networks:
       - web
 
-  authentication:
-    container_name: fwd-auth
-    hostname: fwd-auth
+  forwardauth:
+    container_name: forwardauth
+    hostname: forwardauth
     image: thomseddon/traefik-forward-auth:2.2
     restart: unless-stopped
     networks:
@@ -49,16 +50,25 @@ services:
       - CLIENT_SECRET=$GOOGLE_CLIENT_SECRET
       - SECRET=$OAUTH_SECRET
       - COOKIE_DOMAIN=$TOP_LEVEL_DOMAIN
-      - AUTH_HOST=oauth.$TOP_LEVEL_DOMAIN
+      - AUTH_HOST=forwardauth.$TOP_LEVEL_DOMAIN
       - WHITELIST=$TRAEFIK_LETSENCRYPT_EMAIL
       - INSECURE_COOKIE=false
       - LOG_LEVEL=debug
       - LOG_FORMAT=pretty
       - LIFETIME=60 # Short for testing
-    expose:
-      - 4181
-    # labels:
-    # - traefik.http.services.auth.loadbalancer.server.port=4181
+      - URL_PATH=_oauth
+    # expose:
+    #   - 4181
+    labels:
+      # When these 3 are enabled it loops at the google authentication page
+      - traefik.http.routers.oauth.rule=Host(`forwardauth.${TOP_LEVEL_DOMAIN}`)
+      - traefik.http.routers.oauth.entrypoints=websecure
+      - traefik.http.routers.oauth.tls.certresolver=myresolver
+      - traefik.http.routers.oauth.middlewares=auth-mdl
+      # This appears to be redundant
+      # - traefik.http.routers.oauth.tls=true
+      # This definition is not required as long as the port is exposed.
+      - traefik.http.services.fwd-auth-svc.loadbalancer.server.port=4181
 
   whoami:
     container_name: whoami
@@ -77,7 +87,7 @@ services:
       - traefik.http.routers.whoami-rtr1.tls.certresolver=myresolver
     depends_on:
       - reverse-proxy
-      - authentication
+      - forwardauth
 
 networks:
   web:
