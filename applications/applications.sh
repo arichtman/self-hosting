@@ -2,6 +2,31 @@
 
 dnf install -y httpd-tools certbot # certbot-dns-route53 <= Need to test this is needed - I think we're using TLS challenge instead of DNS so no need for aws modules
 
+# dnf installs old Docker
+dnf remove -y docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+
+dnf -y install dnf-plugins-core
+
+dnf config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+dnf install -y docker-ce docker-ce-cli containerd.io
+
+dnf upgrade
+dnf clean all
+
+systemctl start docker
+
 get_env()
 {
     set -a;
