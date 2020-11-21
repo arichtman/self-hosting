@@ -22,7 +22,19 @@ cp ./www/* "${BASE_DATA_LOCATION}/website"
 CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
 
+# Build ProtonMail Bridge image if required
+if [ $( docker inspect $PROTONMAIL_BRIDGE_IMAGE ) ] ; then
+  ./build-protonmail-image.sh
+fi
+
+printf "\nEnter ProtonMail 2FA token if enabled.\nEnsure sufficient duration left on the token.\n"
+read PROTONMAIL_BRIDGE_EXTRA_2FA;
+# may not be necessary but who's taking chances? This guy :D
+export $PROTONMAIL_BRIDGE_EXTRA_2FA
+# There's likely a way to use the variable only for the context of this command as well as reading from stdIn
+# PROTONMAIL_BRIDGE_EXTRA_2FA=$(read TEMP; echo $TEMP;) docker-compose up -d;
 docker-compose up -d;
+PROTONMAIL_BRIDGE_EXTRA_2FA=""
 
 # Unfortunately some NextCloud database indices are missing on installation (it's deliberate)
 # We will wait till it is confirmed running and then issue the command to fix
