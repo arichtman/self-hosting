@@ -13,6 +13,7 @@ services:
       - --providers.docker=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      - --entrypoints.smtp.address=:${PROTONMAIL_BRIDGE_SMTP_PORT}
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
@@ -33,38 +34,13 @@ services:
       - traefik.http.services.dashboard.loadbalancer.server.port=8080
       - tls.options.default.minversion=VersionTLS13
         
+      - "traefik.http.routers.dashboard.middlewares=basic-auth"
+      - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_PASSWORD_HASHED}"
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.address=http://forwardauth:4181
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.trustForwardHeader=true
     networks:
       - web
-
-  secure-email:
-    container_name: protonmail-bridge
-    hostname: mail.${TOP_LEVEL_DOMAIN}
-    image: ${PROTONMAIL_BRIDGE_IMAGE}
-    restart: unless-stopped
-    expose:
-      - ${PROTONMAIL_BRIDGE_SMTP_PORT}
-      - ${PROTONMAIL_BRIDGE_IMAP_PORT}
-    networks:
-      - web
-    environment:
-      BRIDGE_EXTRA_ARGS: ${PROTONMAIL_BRIDGE_EXTRA_ARGS}
-      PROTONMAIL_LOGIN: ${PROTONMAIL_BRIDGE_USER}
-      PROTONMAIL_PASSWORD: ${PROTONMAIL_BRIDGE_PASSWORD}
-      PROTONMAIL_EXTRA_2FA: ${PROTONMAIL_BRIDGE_EXTRA_2FA}
-      SMTP_PORT: ${PROTONMAIL_BRIDGE_SMTP_PORT}
-      IMAP_PORT: ${PROTONMAIL_BRIDGE_IMAP_PORT}
-    volumes:
-      - ${BASE_DATA_LOCATION}/protonmail:/root
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bridge.rule=Host(`mail.${TOP_LEVEL_DOMAIN}`)"
-      - "traefik.http.routers.bridge.tls.certresolver=myresolver"
-      - "traefik.http.routers.bridge.entrypoints=websecure"
-    depends_on:
-      - reverse-proxy
 
   forwardauth:
     container_name: fwd-auth-google
@@ -123,6 +99,8 @@ services:
       - web
     volumes:
       - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
+      # - /etc/timezone:/etc/timezone:ro
+      # - /etc/localtime:/etc/localtime:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.website.rule=Host(`${TOP_LEVEL_DOMAIN}`, `www.${TOP_LEVEL_DOMAIN}`)"
