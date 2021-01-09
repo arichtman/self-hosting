@@ -3,8 +3,8 @@
 
 Install-Module -Name powershell-yaml -Force -Scope $Config.installScope
 Import-Module -Name powershell-yaml
-$Secrets = Get-Content .\secrets.yml | ConvertFrom-Yaml
-$Config = Get-Content .\config.yml | ConvertFrom-Yaml
+$Secrets = Get-Content .\secrets.yaml | ConvertFrom-Yaml
+$Config = Get-Content .\config.yaml | ConvertFrom-Yaml
 
 # Create key if needed - This will overwrite any existing files (BAD)
 $KeyFilePath = "{0}\.ssh\{1}" -f $Home, $Config.instanceName
@@ -30,7 +30,7 @@ Import-Module -Name HetznerCloud -Force
 Set-HetznerCloud -Token $SecureString
 
 $Server = New-HetznerCloudServer -Name $Config.instanceName -Type $Config.machineModel -Image $Config.imageName -SshKey $Config.instanceName -Datacenter $Config.dataCenter
-ConvertTo-Yaml $Server | Set-Content -Path $(".\output\{0}.yml" -f $Config.instanceName)
+ConvertTo-Yaml $Server | Set-Content -Path $(".\output\{0}.yaml" -f $Config.instanceName)
 $PublicDNSAddress = $Server.public_net.ipv4.dns_ptr
 $PublicIP = $Server.public_net.ipv4.ip
 #endregion
