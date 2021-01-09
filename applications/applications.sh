@@ -23,7 +23,7 @@ CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
 
 # Build ProtonMail Bridge image if required
-if [ $( docker inspect $PROTONMAIL_BRIDGE_IMAGE ) ] ; then
+if [ $( docker inspect $PROTONMAIL_BRIDGE_IMAGE_NAME ) ] ; then
   ./build-protonmail-image.sh
 fi
 
