@@ -8,5 +8,5 @@ output/**/*
 *.appx
 applications/.aws/config
 applications/aws-policy.json
-applications/traefik.toml
-applications/traefik.yaml
+applications/.env.tpl
+applications/.env

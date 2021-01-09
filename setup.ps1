@@ -40,7 +40,11 @@ $PublicIP = $Server.public_net.ipv4.ip
 # Install 
 dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
-Invoke-WebRequest -Uri https://aka.ms/wsl-ubuntu-1804 -OutFile Ubuntu.appx -UseBasicParsing
+
+# Might have to install this https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi
+# wsl --set-default-version 2
+
+Invoke-WebRequest -Uri https://aka.ms/wslubuntu2004 -OutFile Ubuntu.appx -UseBasicParsing
 Add-AppxPackage .\Ubuntu.appx
 Remove-Item -Force .\Ubuntu.appx
 
