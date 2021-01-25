@@ -24,6 +24,7 @@ chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
 
 # Build ProtonMail Bridge image if required
 if [ $( docker inspect $PROTONMAIL_BRIDGE_IMAGE_NAME ) ] ; then
+  chmod u+x ./build-protonmail-image.sh
   ./build-protonmail-image.sh
 fi
 
@@ -34,7 +35,7 @@ export $PROTONMAIL_BRIDGE_EXTRA_2FA
 # There's likely a way to use the variable only for the context of this command as well as reading from stdIn
 # PROTONMAIL_BRIDGE_EXTRA_2FA=$(read TEMP; echo $TEMP;) docker-compose up -d;
 docker-compose up -d;
-PROTONMAIL_BRIDGE_EXTRA_2FA=""
+export PROTONMAIL_BRIDGE_EXTRA_2FA=""
 
 # Unfortunately some NextCloud database indices are missing on installation (it's deliberate)
 # We will wait till it is confirmed running and then issue the command to fix

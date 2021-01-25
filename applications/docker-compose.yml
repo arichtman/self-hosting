@@ -93,19 +93,36 @@ services:
     hostname: www.${TOP_LEVEL_DOMAIN}
     image: nginx:alpine
     restart: always
+  secure-email:
+    container_name: protonmail-bridge
+    hostname: mail.${TOP_LEVEL_DOMAIN}
+    image: ${PROTONMAIL_BRIDGE_IMAGE_NAME}:${PROTONMAIL_BRIDGE_VERSION}
+    restart: "no"
     expose:
-      - 80
+      - ${PROTONMAIL_BRIDGE_SMTP_PORT}
+      - ${PROTONMAIL_BRIDGE_IMAP_PORT}
     networks:
       - web
+    environment:
+      USERNAME: "${PROTONMAIL_BRIDGE_USER}"
+      PASSWORD: "${PROTONMAIL_BRIDGE_PASSWORD}"
+      TOKEN: "${PROTONMAIL_BRIDGE_EXTRA_2FA}"
+      DEBUG: "${HYDROXIDE_DEBUG}"
+      INTERPOD: "${HYDROXIDE_INTERPOD}"
     volumes:
-      - ${BASE_DATA_LOCATION}/website:/usr/share/nginx/html
-      # - /etc/timezone:/etc/timezone:ro
-      # - /etc/localtime:/etc/localtime:ro
+      - ${BASE_DATA_LOCATION}/protonmail:/home/hydroxide/.config/hydroxide
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.website.rule=Host(`${TOP_LEVEL_DOMAIN}`, `www.${TOP_LEVEL_DOMAIN}`)"
-      - "traefik.http.routers.website.tls.certresolver=myresolver"
-      - "traefik.http.routers.website.entrypoints=websecure"
+      - "traefik.tcp.routers.secure-email.entrypoints=smtp"
+      - "traefik.tcp.routers.secure-email.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.secure-email.service=secure-email"
+      # - "traefik.tcp.routers.secure-email.tls=true"
+      - "traefik.tcp.routers.secure-email.tls"
+      - "traefik.tcp.routers.secure-email.tls.certresolver=myresolver"
+      # - "traefik.tcp.routers.secure-email.tls.domains[0].main=richtman.com.au"
+      # - "traefik.tcp.routers.secure-email.tls.domains[0].sans=mail.richtman.com.au"
+      # - "traefik.tcp.routers.secure-email.tls.passthrough=true"
+      - "traefik.tcp.services.secure-email.loadbalancer.server.port=${PROTONMAIL_BRIDGE_SMTP_PORT}"
     depends_on:
       - reverse-proxy
 
@@ -227,6 +244,7 @@ services:
       # - traefik.http.middlewares.nextcloud.headers.referrerPolicy=no-referrer
     
 
+# https://doc.traefik.io/traefik/v2.4/routing/providers/docker/#tcp
 networks:
   web:
     name: web
