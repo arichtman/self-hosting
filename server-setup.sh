@@ -1,5 +1,28 @@
 #! /bin/bash
 
+
+apt update
+apt full-upgrade -y
+
+apt install -y jq python3-pip git
+
+printf "alias pip=pip3\nalias python=python3\n" > ~/.bash_aliases
+exec bash -l
+
+pip install yq
+
+apt install -y gridsite-clients
+
+echo "https://$SECRET_GIT_USERNAME_ENCODED:$SECRET_GIT_PASSWORD_ENCODED@github.com" > ~/.git-credentials
+
+# Install a handy alias. I suspect as we move away from root this will come out.
+printf "\nalias python=python3" >> ~/.bashrc
+printf "\nalias pip=python3" >> ~/.bashrc
+printf "\nalias sl='cd'" >> ~/.bashrc
+printf "\nalias cls='clear'" >> ~/.bashrc
+
+# TODO: revisit everything below
+
 # Install latest, greatest, and newest
 yum install epel-release -y # Repo must be installed before dnf
 yum install dnf -y
@@ -19,10 +42,6 @@ sudo systemctl enable --now snapd.socket
 snap install yq
 
 # Install a handy alias. I suspect as we move away from root this will come out.
-printf "\nalias python=python3" >> ~/.bashrc
-printf "\nalias pip=python3" >> ~/.bashrc
-printf "\nalias sl='cd'" >> ~/.bashrc
-printf "\nalias cls='clear'" >> ~/.bashrc
 printf "\neval $(thefuck --alias)" >> ~./bashrc
 printf "\nalias fu='fuck'" >> ~/.bashrc
 
