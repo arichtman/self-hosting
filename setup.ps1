@@ -6,7 +6,7 @@ Import-Module -Name powershell-yaml
 $Secrets = Get-Content .\secrets.yml | ConvertFrom-Yaml
 $Config = Get-Content .\config.yml | ConvertFrom-Yaml
 
-# Create key if needed TODO: Find a noclobber option for ssh-keygen
+# Create key if needed - This will overwrite any existing files (BAD)
 $KeyFilePath = "{0}\.ssh\{1}" -f $Home, $Config.instanceName
 if ( -Not $(Test-Path $KeyFilePath) ) { ssh-keygen -t ed25519 -f $KeyFilePath -N $Secrets.keyPassphrase }
 $PublicKey = Get-Content "$KeyFilePath.pub"
@@ -54,14 +54,8 @@ ForEach ( $Address in @($PublicDNSAddress, $PublicIP) ) {
     If ( ssh-keygen -l -F $Address ) {
         ssh-keygen -R $Address
     }
-    # TODO: improve security by adding directly from public key
     ssh-keyscan -H $PublicDNSAddress, $PublicIP | Add-Content -Path "$Home\.ssh\known_hosts"
 }
-<#
-"$PublicDNSAddress,$PublicIP $PublicKey" | Add-Content -Path "$Home\.ssh\known_hosts"
-ssh-keygen -H
-Remove-Item "$Home\.ssh\known_hosts.old"
-#>
 
 # TODO: Finish adding the key passphrase to the agent for non interactive login
 Set-Service sshd -StartupType Automatic
@@ -77,7 +71,6 @@ Set-Clipboard -Value $Secrets.keyPassphrase
 ssh-add $KeyFilePath
 Set-Clipboard -Value $null
 Get-Content -Raw .\server-setup.sh | ssh $Config.instanceName
-#Get-Content -Raw .\vscode-repair.sh | ssh $Config.instanceName
 
 #endregion
 
@@ -109,8 +102,6 @@ $Settings = Get-Content -Raw $SettingsFile | ConvertFrom-Json
 $DesiredSettings = @{
     "remote.SSH.configFile" = "$Home\.ssh\config"
     "docker.host"           = "ssh://root@$DNSAddress"
-    #TODO: Nested JSON - this just dumps an escaped string
-    #"remote.SSH.remotePlatform" = "{""$($Secrets.sshAlias)"": ""linux""}"
 }
 
 ForEach ( $NewEntry in $DesiredSettings.Keys) {
