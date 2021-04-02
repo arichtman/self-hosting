@@ -1,53 +1,25 @@
 #! /bin/sh
 
-dnf install -y httpd-tools certbot # certbot-dns-route53 <= Need to test this is needed - I think we're using TLS challenge instead of DNS so no need for aws modules
+# dnf install -y httpd-tools certbot
 
-# dnf installs old Docker
-dnf remove -y docker \
-                  docker-client \
-                  docker-client-latest \
-                  docker-common \
-                  docker-latest \
-                  docker-latest-logrotate \
-                  docker-logrotate \
-                  docker-selinux \
-                  docker-engine-selinux \
-                  docker-engine
+apt install -y docker.io apache2-utils
+# systemctl start docker # Seems to start automagically when docker cli is used
 
-dnf -y install dnf-plugins-core
+# Load use-case specific, secret variables into the session
+eval $(<./.env.private)
+# Generate the compose environment file
+cat ./.env.tpl | envsubst > .env
 
-dnf config-manager \
-    --add-repo \
-    https://download.docker.com/linux/centos/docker-ce.repo
 
-dnf install -y docker-ce docker-ce-cli containerd.io
-
-dnf upgrade
-dnf clean all
-
-systemctl start docker
-
-get_env()
-{
-    set -a;
-    source .env;
-    set +a;
-};
-
-get_env
-
-make_directories()
-{
-    mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
-    mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
-}
-
-make_directories
+mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
+mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
 
 # Prepare website files
 yes | cp ./www/* "${BASE_DATA_LOCATION}/website" ;
 cat ./www/index.html | envsubst > "${BASE_DATA_LOCATION}/website/index.html" ;
 
+# TODO: remove this, not sure traefik even supports hybrid configuration methods and we're definitely preferring the docker provider
+# TODO: rework the traefik static config for secure TLS only
 config_traefik()
 {
     # There's definitely nicer approaches to shell templating than this
@@ -70,8 +42,5 @@ done
 docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:add-missing-indices
 docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:convert-filecache-bigint
 
-# For development
-# export -f get_env
-# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; make_directories ; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
-
-# alias redo="docker-compose down --remove-orphans; get_env; sleep 1; docker-compose up -d"
+# Clear the session variables?
+# exec bash -l

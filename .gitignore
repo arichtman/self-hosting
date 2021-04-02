@@ -3,9 +3,9 @@
 .DS_Store
 secrets.y*ml
 output/**/*
+*.private
 *.appx
 applications/.aws/config
 applications/aws-policy.json
-applications/.env
 applications/traefik.toml
 applications/traefik.yaml
