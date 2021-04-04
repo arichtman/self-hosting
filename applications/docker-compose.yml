@@ -16,12 +16,14 @@ services:
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
       - --certificatesresolvers.myresolver.acme.email=${TRAEFIK_LETSENCRYPT_EMAIL}
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+
+      - --tls.options.default.minversion=VersionTLS13
     ports:
       - 80:80
       - 443:443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${BASE_DATA_LOCATION}/proxy/traefik.yaml:/etc/traefik.yaml
+      # - ${BASE_DATA_LOCATION}/proxy/traefik.yaml:/etc/traefik.yaml
       - ${BASE_DATA_LOCATION}/letsencrypt/acme.json:/letsencrypt/acme.json
     labels:
       - traefik.enable=true
