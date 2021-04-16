@@ -10,24 +10,14 @@ unlink /bin/envsubst && echo "\n" | hubapp install a8m/envsubst && ln -s /usr/lo
 set -a && eval "$(<./.env.private)" && set +a
 # Generate the compose environment file
 cat ./.env.tpl | envsubst > .env
-
+set -a && eval "$(<./.env)" && set +a
 
 mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
 mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
 
 # Prepare website files
-cp ./www/* "${BASE_DATA_LOCATION}/website" ;
-cat ./www/index.html | envsubst > "${BASE_DATA_LOCATION}/website/index.html" ;
-
-# TODO: remove this, not sure traefik even supports hybrid configuration methods and we're definitely preferring the docker provider
-# TODO: rework the traefik static config for secure TLS only
-# config_traefik()
-# {
-#     # There's definitely nicer approaches to shell templating than this
-#     cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"
-# }
-
-# config_traefik
+cat ./www/index.tpl.html | envsubst > ./www/index.html
+cp ./www/* "${BASE_DATA_LOCATION}/website"
 
 CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;

@@ -5,6 +5,8 @@ services:
     hostname: traefik.${TOP_LEVEL_DOMAIN}
     image: ${TRAEFIK_DOCKER_IMAGE}
     restart: always
+    networks:
+      - web
     command:
       - --log.level=DEBUG # on for testing
       - --api.insecure=${TRAEFIK_API_INSECURE_ENABLED}
@@ -16,14 +18,11 @@ services:
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
       - --certificatesresolvers.myresolver.acme.email=${TRAEFIK_LETSENCRYPT_EMAIL}
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-
-      - --tls.options.default.minversion=VersionTLS13
     ports:
       - 80:80
       - 443:443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      # - ${BASE_DATA_LOCATION}/proxy/traefik.yaml:/etc/traefik.yaml
       - ${BASE_DATA_LOCATION}/letsencrypt/acme.json:/letsencrypt/acme.json
     labels:
       - traefik.enable=true
@@ -32,13 +31,8 @@ services:
       - traefik.http.routers.dashboard.tls.certresolver=myresolver
       - traefik.http.routers.dashboard.entrypoints=websecure
       - traefik.http.services.dashboard.loadbalancer.server.port=8080
-
-      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.address=http://forwardauth:4181
-      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
-      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.trustForwardHeader=true
-    networks:
-      - web
-
+      - tls.options.default.minversion=VersionTLS13
+        
   forwardauth:
     container_name: fwd-auth-google
     hostname: fwd-auth-google
@@ -54,7 +48,7 @@ services:
       - AUTH_HOST=oauth.$TOP_LEVEL_DOMAIN
       - WHITELIST=$TRAEFIK_LETSENCRYPT_EMAIL
       - INSECURE_COOKIE=false
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=debug # for development
       - LOG_FORMAT=pretty
       - LIFETIME=15 # Short for testing
     expose:
@@ -64,6 +58,10 @@ services:
       - traefik.http.routers.oauth.entrypoints=websecure
       - traefik.http.routers.oauth.tls.certresolver=myresolver
       - traefik.http.routers.oauth.middlewares=fwd-auth-google-mdl
+      
+      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.address=http://forwardauth:4181
+      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
+      - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.trustForwardHeader=true
 
   whoami:
     container_name: whoami
@@ -80,8 +78,9 @@ services:
       - reverse-proxy
       - forwardauth
 
+
   website:
-    container_name: nginx
+    container_name: website
     hostname: www.${TOP_LEVEL_DOMAIN}
     image: nginx:alpine
     restart: always
@@ -102,7 +101,7 @@ services:
   rss-reader:
     container_name: ttrss
     hostname: rss.${TOP_LEVEL_DOMAIN}
-    image: wangqiru/ttrss:19.8
+    image: wangqiru/ttrss:latest
     restart: unless-stopped
     expose:
       - 181
@@ -146,7 +145,7 @@ services:
       - data
 
   cloud-db:
-    container_name: pg-cloud
+    container_name: cloud-db
     hostname: cloud-db
     image: ${NEXTCLOUD_POSTGRES_DOCKER_IMAGE}
     restart: unless-stopped
@@ -216,6 +215,7 @@ services:
       # - traefik.http.middlewares.nextcloud.headers.contentTypeNosniff=true
       # - traefik.http.middlewares.nextcloud.headers.forceSTSHeader=true
       # - traefik.http.middlewares.nextcloud.headers.referrerPolicy=no-referrer
+    
 
 networks:
   web:

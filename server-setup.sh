@@ -4,7 +4,8 @@
 apt update
 apt full-upgrade -y
 
-apt install -y jq python3-pip git
+apt install -y jq python3-pip git httpie
+http https://raw.githubusercontent.com/warrensbox/hubapp/release/install.sh | bash
 
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CC86BB64
 add-apt-repository ppa:rmescandon/yq
