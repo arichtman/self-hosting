@@ -19,15 +19,6 @@ entryPoints:
   http:
     address: ":80"
 
-http:
-  middlewares:
-    googleAuth:
-      forwardAuth:
-        address: "http://oauth:4181"
-        trustForwardHeader: true
-        authResponseHeaders:
-          - "X-Forwarded-User"
-
 # This appears to be being ignored and TLS 1.0 and 1.1 are still being allowed >:(
 tls:
   options:

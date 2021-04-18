@@ -1,60 +1,23 @@
 #! /bin/sh
 
-dnf install -y httpd-tools certbot # certbot-dns-route53 <= Need to test this is needed - I think we're using TLS challenge instead of DNS so no need for aws modules
-
-# dnf installs old Docker
-dnf remove -y docker \
-                  docker-client \
-                  docker-client-latest \
-                  docker-common \
-                  docker-latest \
-                  docker-latest-logrotate \
-                  docker-logrotate \
-                  docker-selinux \
-                  docker-engine-selinux \
-                  docker-engine
-
-dnf -y install dnf-plugins-core
-
-dnf config-manager \
-    --add-repo \
-    https://download.docker.com/linux/centos/docker-ce.repo
-
-dnf install -y docker-ce docker-ce-cli containerd.io
-
-dnf upgrade
-dnf clean all
-
+apt install -y docker.io docker-compose apache2-utils
 systemctl start docker
 
-get_env()
-{
-    set -a;
-    source .env;
-    set +a;
-};
+# Might need to review this, was really hoping for a github-aware package manager. I found *something* but this smells a little.
+unlink /bin/envsubst && echo "\n" | hubapp install a8m/envsubst && ln -s /usr/local/bin/envsubst /usr/bin/envsubst
 
-get_env
+# Load use-case specific, secret variables into the session
+set -a && eval "$(<./.env.private)" && set +a
+# Generate the compose environment file
+cat ./.env.tpl | envsubst > .env
+set -a && eval "$(<./.env)" && set +a
 
-make_directories()
-{
-    mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
-    mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
-}
-
-make_directories
+mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
+mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
 
 # Prepare website files
-yes | cp ./www/* "${BASE_DATA_LOCATION}/website" ;
-cat ./www/index.html | envsubst > "${BASE_DATA_LOCATION}/website/index.html" ;
-
-config_traefik()
-{
-    # There's definitely nicer approaches to shell templating than this
-    cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"
-}
-
-config_traefik
+cat ./www/index.tpl.html | envsubst > ./www/index.html
+cp ./www/* "${BASE_DATA_LOCATION}/website"
 
 CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
@@ -67,11 +30,5 @@ while ! docker-compose logs nextcloud | grep "Command line: 'apache2 -D FOREGROU
   sleep 10;
 done
 
-docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:add-missing-indices
-docker-compose exec -u www-data nextcloud php occ --no-interaction --quiet db:convert-filecache-bigint
-
-# For development
-# export -f get_env
-# alias nuke="docker-compose down; rm -rf "${BASE_DATA_LOCATION}/nextcloud"; make_directories ; cat ./traefik.yaml.tpl | envsubst > "${BASE_DATA_LOCATION}/proxy/traefik.yaml"; get_env; sleep 5; docker-compose up -d"
-
-# alias redo="docker-compose down --remove-orphans; get_env; sleep 1; docker-compose up -d"
+docker-compose exec -u www-data cloud php occ --no-interaction --quiet db:add-missing-indices
+docker-compose exec -u www-data cloud php occ --no-interaction --quiet db:convert-filecache-bigint
