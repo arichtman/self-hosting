@@ -1,4 +1,3 @@
-
 ---
 api:
   entrypoint: dashboard
@@ -19,7 +18,7 @@ entryPoints:
   http:
     address: ":80"
 
-# This appears to be being ignored and TLS 1.0 and 1.1 are still being allowed >:(
+# This appears to be being ignored and TLS 1.0 and 1.1 are still being allowed
 tls:
   options:
     default:

@@ -26,8 +26,8 @@ printf "\n. /etc/bash_completion.d/yq" >> ~/.bashrc
 printf "\nset show-all-if-ambiguous on\n" >> ~/.inputrc
 
 exec bash -l
-# TODO: review if this is for ubuntu or is leftover from centos
+# TODO: adjust for Ubuntu
 # Permanently add interface for our floating IP
-[ -z ${IP+x} ] && \
-  printf "BOOTPROTO=static\nDEVICE=eth0:1\nIPADDR=%s\nPREFIX=32\nTYPE=Ethernet\nUSERCTL=no\nONBOOT=yes" $IP > /etc/sysconfig/network-scripts/ifcfg-eth0:1; \
-  systemctl restart network
+#[ -z ${IP+x} ] && \
+#  printf "BOOTPROTO=static\nDEVICE=eth0:1\nIPADDR=%s\nPREFIX=32\nTYPE=Ethernet\nUSERCTL=no\nONBOOT=yes" $IP > /etc/sysconfig/network-scripts/ifcfg-eth0:1; \
+#  systemctl restart network

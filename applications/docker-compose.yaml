@@ -33,14 +33,12 @@ services:
       - traefik.http.routers.dashboard.entrypoints=websecure
       - traefik.http.services.dashboard.loadbalancer.server.port=8080
       - tls.options.default.minversion=VersionTLS13
-        
+
       - "traefik.http.routers.dashboard.middlewares=basic-auth"
       - "traefik.http.middlewares.basic-auth.basicauth.users=${TRAEFIK_PASSWORD_HASHED}"
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.address=http://forwardauth:4181
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.trustForwardHeader=true
-    networks:
-      - web
 
   forwardauth:
     container_name: fwd-auth-google
@@ -67,7 +65,7 @@ services:
       - traefik.http.routers.oauth.entrypoints=websecure
       - traefik.http.routers.oauth.tls.certresolver=myresolver
       - traefik.http.routers.oauth.middlewares=fwd-auth-google-mdl
-      
+
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.address=http://forwardauth:4181
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.authResponseHeaders=X-Forwarded-User
       - traefik.http.middlewares.fwd-auth-google-mdl.forwardAuth.trustForwardHeader=true
@@ -120,7 +118,8 @@ services:
       - "traefik.tcp.routers.secure-email.tls"
       - "traefik.tcp.routers.secure-email.tls.certresolver=myresolver"
       # - "traefik.tcp.routers.secure-email.tls.domains[0].main=richtman.com.au"
-      # - "traefik.tcp.routers.secure-email.tls.domains[0].sans=mail.richtman.com.au"
+      # - "traefik.tcp.routers.secure-email.tls.domains[0].sans
+      #                                             =mail.richtman.com.au"
       # - "traefik.tcp.routers.secure-email.tls.passthrough=true"
       - "traefik.tcp.services.secure-email.loadbalancer.server.port=${PROTONMAIL_BRIDGE_SMTP_PORT}"
     depends_on:
@@ -154,7 +153,8 @@ services:
     depends_on:
       - reverse-proxy
       - rss-db
-    command: sh -c 'sh /wait-for.sh $$DB_HOST:$$DB_PORT -- php /configure-db.php && exec s6-svscan /etc/s6/'
+    command: "sh -c 'sh /wait-for.sh $$DB_HOST:$$DB_PORT
+                -- php /configure-db.php && exec s6-svscan /etc/s6/'"
 
   rss-db:
     image: postgres:alpine
@@ -197,7 +197,7 @@ services:
     hostname: ${NEXTCLOUD_FQDN}
     volumes:
       - ${NEXTCLOUD_HOST_WEB_DIR}:/var/www/html
-      # changing the data directory leads to permissions issues for www-data user - not sure how to resolve.
+      # Need to fix directory perms for www-data user
       # - ${NEXTCLOUD_HOST_DATA_DIR}:/var/www/data
     networks:
       - data
@@ -231,10 +231,14 @@ services:
       # These 2 resolve leaky server information
       - traefik.http.middlewares.nextcloud.headers.customresponseheaders.Server=
       - traefik.http.middlewares.nextcloud.headers.customresponseheaders.X-Powered-By=
-      # This middleware breaks trust due to mixed content (tested Chrome 84 and Firefox 80). It does correct the redirect for logging in though.
-      # - "traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' ${TOP_LEVEL_DOMAIN} *.${TOP_LEVEL_DOMAIN}"
-      # These remaining ones I'm not quite sure what they're supposed to resolve.
-      # - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=ALLOW-FROM https://${NEXTCLOUD_FQDN}
+      # This middleware breaks trust due to mixed content
+      # (tested Chrome 84 and Firefox 80).
+      # It does correct the redirect for logging in though.
+      # - "traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=
+      #       frame-ancestors 'self' ${TOP_LEVEL_DOMAIN} *.${TOP_LEVEL_DOMAIN}"
+      # These remaining ones I'm not quite sure what they're supposed to resolve
+      # - traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=
+      #     ALLOW-FROM https://${NEXTCLOUD_FQDN}
       # Some of these look like security enhancements
       # - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
       # - traefik.http.middlewares.nextcloud.headers.stsPreload=true
@@ -242,7 +246,6 @@ services:
       # - traefik.http.middlewares.nextcloud.headers.contentTypeNosniff=true
       # - traefik.http.middlewares.nextcloud.headers.forceSTSHeader=true
       # - traefik.http.middlewares.nextcloud.headers.referrerPolicy=no-referrer
-    
 
 # https://doc.traefik.io/traefik/v2.4/routing/providers/docker/#tcp
 networks:

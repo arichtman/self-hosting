@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Simple git hook to prevent invalid YAML commits
+
+YAML_FILES=$( find . -name "*.yaml" )
+for YAML_FILE in $YAML_FILES
+do
+  yamllint --no-warnings $YAML_FILE
+  CODE=$?
+  [ $CODE -ne 0 ] && return $CODE
+done
+return 0

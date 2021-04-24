@@ -1,6 +1,6 @@
 #! /bin/sh
 
-apt install -y docker.io docker-compose apache2-utils
+apt install -y docker.io docker-compose apache2-utils yamllint
 systemctl start docker
 
 # Might need to review this, was really hoping for a github-aware package manager. I found *something* but this smells a little.
