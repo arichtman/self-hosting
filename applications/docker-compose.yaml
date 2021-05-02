@@ -13,7 +13,7 @@ services:
       - --providers.docker=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --entrypoints.smtp.address=:${PROTONMAIL_BRIDGE_SMTP_PORT}
+      - --entrypoints.smtp.address=:1025
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
@@ -91,24 +91,30 @@ services:
     hostname: www.${TOP_LEVEL_DOMAIN}
     image: nginx:alpine
     restart: always
+    networks:
+      - web
+    depends_on:
+      - reverse-proxy
+
   secure-email:
-    container_name: protonmail-bridge
+    container_name: secure-email
     hostname: mail.${TOP_LEVEL_DOMAIN}
-    image: ${PROTONMAIL_BRIDGE_IMAGE_NAME}:${PROTONMAIL_BRIDGE_VERSION}
+    image: ${HYDROXIDE_IMAGE_NAME}:${HYDROXIDE_VERSION}
     restart: "no"
     expose:
-      - ${PROTONMAIL_BRIDGE_SMTP_PORT}
-      - ${PROTONMAIL_BRIDGE_IMAP_PORT}
+      - 1025
+      - 1443
+      - 8080
     networks:
       - web
     environment:
-      USERNAME: "${PROTONMAIL_BRIDGE_USER}"
-      PASSWORD: "${PROTONMAIL_BRIDGE_PASSWORD}"
-      TOKEN: "${PROTONMAIL_BRIDGE_EXTRA_2FA}"
+      USERNAME: "${HYDROXIDE_USER}"
+      PASSWORD: "${HYDROXIDE_PASSWORD}"
+      TOKEN: "${HYDROXIDE_EXTRA_2FA}"
       DEBUG: "${HYDROXIDE_DEBUG}"
       INTERPOD: "${HYDROXIDE_INTERPOD}"
     volumes:
-      - ${BASE_DATA_LOCATION}/protonmail:/home/hydroxide/.config/hydroxide
+      - ${BASE_DATA_LOCATION}/hydroxide:/home/hydroxide/.config/hydroxide
     labels:
       - "traefik.enable=true"
       - "traefik.tcp.routers.secure-email.entrypoints=smtp"
@@ -121,7 +127,7 @@ services:
       # - "traefik.tcp.routers.secure-email.tls.domains[0].sans
       #                                             =mail.richtman.com.au"
       # - "traefik.tcp.routers.secure-email.tls.passthrough=true"
-      - "traefik.tcp.services.secure-email.loadbalancer.server.port=${PROTONMAIL_BRIDGE_SMTP_PORT}"
+      - "traefik.tcp.services.secure-email.loadbalancer.server.port=1025"
     depends_on:
       - reverse-proxy
 
@@ -195,6 +201,7 @@ services:
     image: ${NEXTCLOUD_DOCKER_IMAGE}
     container_name: nextcloud
     hostname: ${NEXTCLOUD_FQDN}
+    user: "www-data"
     volumes:
       - ${NEXTCLOUD_HOST_WEB_DIR}:/var/www/html
       # Need to fix directory perms for www-data user

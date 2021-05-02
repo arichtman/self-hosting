@@ -10,9 +10,10 @@ unlink /bin/envsubst && echo "\n" | hubapp install a8m/envsubst && ln -s /usr/lo
 set -a && eval "$(<./.env.private)" && set +a
 # Generate the compose environment file
 cat ./.env.tpl | envsubst > .env
+# Import the final form of all our environtment variables
 set -a && eval "$(<./.env)" && set +a
 
-mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,proxy,ttrss};
+mkdir -p ${BASE_DATA_LOCATION}/{letsencrypt,nextcloud,website,ttrss,hydroxide};
 mkdir -p {$NEXTCLOUD_HOST_WEB_DIR,$NEXTCLOUD_HOST_DB_DIR}
 
 # Prepare website files
@@ -23,19 +24,15 @@ CERT_DETAILS_FILE="${BASE_DATA_LOCATION}/letsencrypt/acme.json";
 chmod 600 $CERT_DETAILS_FILE >> $CERT_DETAILS_FILE;
 
 # Build ProtonMail Bridge image if required
-if [ $( docker inspect $PROTONMAIL_BRIDGE_IMAGE_NAME ) ] ; then
+if [ $( docker inspect $HYDROXIDE_IMAGE_NAME ) ] ; then
   chmod u+x ./build-protonmail-image.sh
   ./build-protonmail-image.sh
 fi
 
-printf "\nEnter ProtonMail 2FA token if enabled.\nEnsure sufficient duration left on the token.\n"
-read PROTONMAIL_BRIDGE_EXTRA_2FA;
-# may not be necessary but who's taking chances? This guy :D
-export $PROTONMAIL_BRIDGE_EXTRA_2FA
-# There's likely a way to use the variable only for the context of this command as well as reading from stdIn
-# PROTONMAIL_BRIDGE_EXTRA_2FA=$(read TEMP; echo $TEMP;) docker-compose up -d;
-docker-compose up -d;
-export PROTONMAIL_BRIDGE_EXTRA_2FA=""
+read -p "Enter ProtonMail 2FA token if enabled. Ensure sufficient duration left on the token: " -N 6 HYDROXIDE_EXTRA_2FA && \
+  export HYDROXIDE_EXTRA_2FA && \
+  docker-compose up -d && \
+  export HYDROXIDE_EXTRA_2FA=""
 
 # Unfortunately some NextCloud database indices are missing on installation (it's deliberate)
 # We will wait till it is confirmed running and then issue the command to fix
